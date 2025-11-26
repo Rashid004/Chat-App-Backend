@@ -1,43 +1,9 @@
-import { model, Schema, Types } from "mongoose";
+import { model, Schema } from "mongoose";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
-
-export interface IUser {
-  _id: Types.ObjectId;
-  username: string;
-  email: string;
-  password: string;
-  role: "user" | "admin";
-  isEmailVerified: boolean;
-
-  avatarUrl?: {
-    url: string;
-    localPath?: string;
-  };
-
-  refreshToken?: string;
-
-  forgetPasswordToken?: string;
-  forgetPasswordTokenExpiry?: Date;
-
-  emailVerificationToken?: string;
-  emailVerificationTokenExpiry?: Date;
-
-  createdAt?: Date;
-  updatedAt?: Date;
-
-  // instance methods
-  isPasswordCorrect(password: string): Promise<boolean>;
-  generateAccessToken(): string;
-  generateRefreshToken(): string;
-  generateTemporaryToken(): {
-    unHashedToken: string;
-    hashedToken: string;
-    tokenExpiry: number;
-  };
-}
+import { IUser } from "../types";
 
 const userSchema = new Schema<IUser>(
   {
@@ -90,12 +56,9 @@ const userSchema = new Schema<IUser>(
 
 /* ------------------------ Password Hashing ------------------------ */
 
-userSchema.pre("save", async function (next) {
-  // @ts-ignore
-  if (!this.isModified("password")) return next();
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 10);
-  // @ts-ignore
-  next();
 });
 
 /* ------------------------ Instance Methods ------------------------ */

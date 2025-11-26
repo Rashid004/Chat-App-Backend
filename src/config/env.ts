@@ -25,8 +25,14 @@ export const env = createEnv({
     MONGODB_URI: z.string().url("Invalid MongoDB URI format"),
 
     // JWT
-    JWT_SECRET: z.string().min(32, "JWT secret must be at least 32 characters"),
-    JWT_EXPIRES_IN: z.string().default("7d"),
+    JWT_ACCESS_TOKEN_SECRET: z
+      .string()
+      .min(32, "JWT access token secret must be at least 32 characters"),
+    JWT_REFRESH_TOKEN_SECRET: z
+      .string()
+      .min(32, "JWT refresh token secret must be at least 32 characters"),
+    JWT_ACCESS_TOKEN_EXPIRY: z.string().default("15m"),
+    JWT_REFRESH_TOKEN_EXPIRY: z.string().default("7d"),
 
     // CORS
     CORS_ORIGIN: z.string().optional(),

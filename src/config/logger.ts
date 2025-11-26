@@ -56,7 +56,7 @@ export const createModuleLogger = (module: string) => {
 export const httpLogger = pinoHttp({
   logger,
 
-  customLogLevel: (req, res, err) => {
+  customLogLevel: (_req, res, err) => {
     if (res.statusCode >= 500 || err) return "error";
     if (res.statusCode >= 400) return "warn";
     return "info";
@@ -65,6 +65,22 @@ export const httpLogger = pinoHttp({
   customSuccessMessage: (req, res) =>
     `${req.method} ${req.url} ${res.statusCode}`,
 
-  customErrorMessage: (req, res, err) =>
+  customErrorMessage: (req, _res, err) =>
     `${req.method} ${req.url} FAILED: ${err?.message || ""}`,
+
+  // Customize serializers to reduce log verbosity
+  serializers: {
+    req: (req) => ({
+      method: req.method,
+      url: req.url,
+      // Only log important headers
+      headers: {
+        "content-type": req.headers["content-type"],
+        "user-agent": req.headers["user-agent"],
+      },
+    }),
+    res: (res) => ({
+      statusCode: res.statusCode,
+    }),
+  },
 });
