@@ -7,6 +7,7 @@ import { env } from "./config/env";
 import { connectDB } from "./config/database";
 import authRoutes from "./routes/auth";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
+import { apiLimiter } from "./middleware/rateLimiter";
 
 const app = express();
 
@@ -19,6 +20,8 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+apiLimiter();
 
 // Security (helmet) - adjust for development
 app.use(

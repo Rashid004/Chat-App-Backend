@@ -1,6 +1,9 @@
 import { LoginDto, RegisterDto } from "../dto/user.dto";
 import { authRepository } from "../repository/auth.repository";
 import { createModuleLogger } from "../config/logger";
+import jwt from "jsonwebtoken";
+import { env } from "../config/env";
+import { ApiError } from "../utils/api-error";
 
 const logger = createModuleLogger("auth.service");
 
@@ -75,5 +78,50 @@ export const authService = {
     await authRepository.clearRefreshToken(userId);
     logger.info({ userId }, "User logged out successfully");
     return true;
+  },
+
+  // Refresh Token
+  refreshAccessToken: async (incomingRefreshToken: string) => {
+    if (!incomingRefreshToken) {
+      logger.warn("No refresh token provided");
+      throw new ApiError(401, "Refresh token missing");
+    }
+
+    const user = await authRepository.findByRefreshToken(
+      incomingRefreshToken ?? ""
+    );
+    if (!user) {
+      logger.warn("Invalid refresh token");
+      throw new ApiError(401, "Invalid refresh token");
+    }
+
+    let decoded: any;
+
+    try {
+      decoded = jwt.verify(
+        incomingRefreshToken,
+        env.JWT_REFRESH_TOKEN_SECRET as string
+      );
+    } catch (error) {
+      logger.warn("Refresh token verification failed", { error });
+      throw new ApiError(401, "Invalid refresh token");
+    }
+
+    const newAccessToken = jwt.sign(
+      { userId: user._id },
+      env.JWT_ACCESS_TOKEN_SECRET,
+      { expiresIn: env.JWT_ACCESS_TOKEN_EXPIRY }
+    );
+
+    await authRepository.updateRefreshToken(
+      user._id.toString(),
+      incomingRefreshToken
+    );
+    logger.info({ userId: user._id }, "Access token refreshed successfully");
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: incomingRefreshToken,
+    };
   },
 };

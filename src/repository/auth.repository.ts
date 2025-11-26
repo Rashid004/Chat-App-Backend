@@ -15,7 +15,10 @@ export const authRepository = {
 
   // --- Create new user ---
   createUser: async (data: Partial<IUser>) => {
-    logger.debug({ username: data.username, email: data.email }, "Creating new user");
+    logger.debug(
+      { username: data.username, email: data.email },
+      "Creating new user"
+    );
     const user = await UserModel.create(data);
     logger.info({ userId: user._id }, "User created successfully");
     return user;
@@ -41,12 +44,19 @@ export const authRepository = {
     return user;
   },
 
+  // Find By refresh Token
+  findByRefreshToken: async (token: string) => {
+    logger.debug({ token }, "Finding user by refresh token");
+    await UserModel.findOne({ refreshToken: token });
+    logger.debug("User lookup by refresh token completed");
+  },
+
   // --- Update refresh token ---
-  updateRefreshToken: async (id: string, token: string) => {
+  updateRefreshToken: async (id: string, newToken: string) => {
     logger.debug({ userId: id }, "Updating refresh token");
     const user = await UserModel.findByIdAndUpdate(
       id,
-      { refreshToken: token },
+      { refreshToken: newToken },
       { new: true }
     );
     logger.debug({ userId: id }, "Refresh token updated");

@@ -3,6 +3,7 @@ import { loginDto, registerDto } from "../dto/user.dto";
 import { authService } from "../service/auth.service";
 import { createModuleLogger } from "../config/logger";
 import { ZodError } from "zod";
+import { env } from "../config/env";
 
 const logger = createModuleLogger("auth.controller");
 
@@ -61,12 +62,12 @@ export const login = async (req: Request, res: Response) => {
     return res
       .cookie("accessToken", accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: env.NODE_ENV === "production",
         sameSite: "strict",
       })
       .cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: env.NODE_ENV === "production",
         sameSite: "strict",
       })
       .status(200)
@@ -127,4 +128,25 @@ export const logout = async (req: Request, res: Response) => {
       message,
     });
   }
+};
+
+// ----- Refresh Access Token -----
+export const refreshAccessToken = async (req: Request, res: Response) => {
+  const incomingRefreshToken =
+    req.cookies.refreshToken || req.body.refreshToken;
+
+  const { accessToken, refreshToken, user } =
+    await authService.refreshAccessToken(incomingRefreshToken);
+
+  return res
+    .cookie("accessToken", accessToken, { httpOnly: true })
+    .cookie("refreshToken", refreshToken, { httpOnly: true })
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { user, accessToken, refreshToken },
+        "Access token refreshed"
+      )
+    );
 };
