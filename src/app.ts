@@ -21,7 +21,8 @@ app.use(
   })
 );
 
-apiLimiter();
+// Apply global API rate limiter
+app.use(apiLimiter);
 
 // Security (helmet) - adjust for development
 app.use(

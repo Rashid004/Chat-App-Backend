@@ -4,6 +4,7 @@ import { authService } from "../service/auth.service";
 import { createModuleLogger } from "../config/logger";
 import { ZodError } from "zod";
 import { env } from "../config/env";
+import { ApiResponse } from "../utils/api-response";
 
 const logger = createModuleLogger("auth.controller");
 
@@ -94,6 +95,38 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
+// ----- verify Email -----
+export const verifyEmail = async (req: Request, res: Response) => {
+  try {
+    const { verificationToken } = req.params;
+
+    if (!verificationToken) {
+      logger.warn("Verification token missing in request");
+      return res.status(400).json({
+        success: false,
+        message: "Verification token is required",
+      });
+    }
+
+    const result = await authService.verifyEmail(verificationToken);
+
+    logger.info("Email verified successfully");
+    return res.status(200).json({
+      success: true,
+      data: result,
+      message: "Email verified successfully",
+    });
+  } catch (error) {
+    logger.error({ error }, "Email verification failed");
+    const message =
+      error instanceof Error ? error.message : "Email verification failed";
+    return res.status(400).json({
+      success: false,
+      message,
+    });
+  }
+};
+
 // ----- Logout User -----
 export const logout = async (req: Request, res: Response) => {
   try {
@@ -132,21 +165,91 @@ export const logout = async (req: Request, res: Response) => {
 
 // ----- Refresh Access Token -----
 export const refreshAccessToken = async (req: Request, res: Response) => {
-  const incomingRefreshToken =
-    req.cookies.refreshToken || req.body.refreshToken;
+  try {
+    const incomingRefreshToken =
+      req.cookies.refreshToken || req.body.refreshToken;
 
-  const { accessToken, refreshToken, user } =
-    await authService.refreshAccessToken(incomingRefreshToken);
+    if (!incomingRefreshToken) {
+      logger.warn("Refresh token missing in request");
+      return res.status(401).json({
+        success: false,
+        message: "Refresh token is required",
+      });
+    }
 
+    const { accessToken, refreshToken, user } =
+      await authService.refreshAccessToken(incomingRefreshToken);
+
+    logger.info({ userId: user._id }, "Access token refreshed successfully");
+
+    return res
+      .cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: env.NODE_ENV === "production",
+        sameSite: "strict",
+      })
+      .cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: env.NODE_ENV === "production",
+        sameSite: "strict",
+      })
+      .status(200)
+      .json({
+        success: true,
+        data: { user, accessToken, refreshToken },
+        message: "Access token refreshed successfully",
+      });
+  } catch (error) {
+    logger.error({ error }, "Token refresh failed");
+    const message =
+      error instanceof Error ? error.message : "Token refresh failed";
+    return res.status(401).json({
+      success: false,
+      message,
+    });
+  }
+};
+
+// ----- Forget Password -----
+export const forgetPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    await authService.forgotPassword(email);
+    logger.info({ email }, "Forgot password process initiated");
+    return res.status(200).json({
+      success: true,
+      message: "Password reset instructions sent to email if it exists",
+    });
+  } catch (error) {}
+};
+
+// ------ Reset Password -------
+export const resetPassword = async (req: Request, res: Response) => {
+  const { resetToken } = req.params;
+  const { newPassword } = req.body as { newPassword: string };
+  const result = await authService.resetForgottenPassword(
+    resetToken,
+    newPassword
+  );
   return res
-    .cookie("accessToken", accessToken, { httpOnly: true })
-    .cookie("refreshToken", refreshToken, { httpOnly: true })
     .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { user, accessToken, refreshToken },
-        "Access token refreshed"
-      )
-    );
+    .json(new ApiResponse(200, result, "Password reset successfully"));
+};
+
+// ------- Change Password --------
+
+export const changePassword = async (req: Request, res: Response) => {
+  userId = req.user;
+  if (!userId) throw new ApiError(401, "Unauthorized");
+
+  const { oldPassword, newPassword } = req.body;
+
+  const result = await authService.changeCurrentPassword(
+    userId.toString(),
+    oldPassword,
+    newPassword
+  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Password changed successfully"));
 };
