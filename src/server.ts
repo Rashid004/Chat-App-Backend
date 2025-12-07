@@ -1,3 +1,4 @@
+import "./types/index"; // Load Express type augmentation
 import http from "http";
 import app from "./app";
 import { Server } from "socket.io";

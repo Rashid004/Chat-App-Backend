@@ -1,23 +1,42 @@
-import { Document, Schema, Types } from "mongoose";
+import { model, Schema } from "mongoose";
+import { IChat } from "../types/chat";
 
-export interface IChat extends Document {
-  name: string;
-  isGroupChat: boolean;
-  lastMessage?: Types.ObjectId | null;
-  participants: Types.ObjectId[];
-  admin?: Types.ObjectId;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+/* ------------- Chat Schema -------------- */
 
-const chatSchema = new Schema<IChat>({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
+const chatSchema = new Schema<IChat>(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    isGroupChat: {
+      type: Boolean,
+      default: false,
+    },
+    lastMessage: {
+      type: Schema.Types.ObjectId,
+      ref: "ChatMessage",
+    },
+    participants: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        require: true,
+      },
+    ],
+    admin: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
   },
-  isGroupChat: {
-    type: Boolean,
-    default: false,
-  },
-});
+  { timestamps: true }
+);
+
+chatSchema.index({ participants: 1 });
+
+chatSchema.index({ updatedAt: -1 });
+
+chatSchema.index({ isGroupChat: 1 });
+
+export const ChatModel = model<IChat>("Chat", chatSchema);

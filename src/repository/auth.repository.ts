@@ -1,7 +1,7 @@
 import { createModuleLogger } from "../config/logger";
 import { Types } from "mongoose";
-import { UserModel } from "../models/User";
 import { IUser } from "../types/user";
+import { UserModel } from "../models/user";
 
 const logger = createModuleLogger("auth.repository");
 

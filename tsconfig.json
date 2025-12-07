@@ -11,6 +11,7 @@
     "target": "es2020",
     "moduleResolution": "nodenext",
     "esModuleInterop": true,
+    "typeRoots": ["./node_modules/@types", "./src/types"],
     // "types": [],
     // For nodejs:
     // "lib": ["esnext"],
@@ -42,5 +43,10 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"],
+  "ts-node": {
+    "files": true
   }
 }
