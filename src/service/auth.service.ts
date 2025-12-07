@@ -10,7 +10,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { env } from "../config/env";
 import { ApiError } from "../utils/api-error";
-import { email } from "zod";
+import { sanitizeUser } from "../utils/sanitizeUser";
 
 const logger = createModuleLogger("auth.service");
 
@@ -38,8 +38,26 @@ export const authService = {
       password,
     });
 
-    logger.info({ userId: user._id, username }, "User registered successfully");
-    return user;
+    // Generate email verification token
+    const { unHashedToken, hashedToken, tokenExpiry } =
+      user.generateTemporaryToken();
+
+    user.emailVerificationToken = hashedToken;
+    user.emailVerificationTokenExpiry = new Date(tokenExpiry);
+    await user.save({ validateBeforeSave: false });
+
+    logger.info(
+      { username },
+      "User registered successfully with email verification token"
+    );
+
+    // TODO: Send email with unHashedToken
+    // In production, you would send this via email service
+    // For now, return it (ONLY FOR DEVELOPMENT/TESTING)
+    return {
+      user: sanitizeUser(user),
+      verificationToken: unHashedToken, // Remove this in production
+    };
   },
 
   // login User
@@ -73,7 +91,7 @@ export const authService = {
     logger.info({ userId: user._id }, "User logged in successfully");
 
     return {
-      user,
+      user: sanitizeUser(user),
       accessToken,
       refreshToken,
     };
@@ -159,42 +177,51 @@ export const authService = {
     logger.info({ userId: user._id }, "Access token refreshed successfully");
 
     return {
-      user,
+      user: sanitizeUser(user),
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
     };
   },
 
-  forgotPassword: async (email: ForgotPasswordDto) => {
-    logger.info({ email }, "Processing forgot password request");
+  forgotPassword: async (data: ForgotPasswordDto) => {
+    logger.info({ email: data.email }, "Processing forgot password request");
 
-    const user = await authRepository.forgetPassword(email.email);
+    const user = await authRepository.forgetPassword(data.email);
     if (!user) {
-      logger.warn({ email }, "User not found for password reset");
-      throw new ApiError(404, "User not found");
+      logger.warn({ email: data.email }, "User not found for password reset");
+      // Don't throw error for security - don't reveal if email exists
+      return { message: "If email exists, reset instructions have been sent" };
     }
 
     const { unHashedToken, hashedToken, tokenExpiry } =
       user.generateTemporaryToken();
 
-    user.passwordResetToken = hashedToken;
-    user.passwordResetTokenExpiry = expiry;
+    user.forgetPasswordToken = hashedToken;
+    user.forgetPasswordTokenExpiry = new Date(tokenExpiry);
     await user.save({ validateBeforeSave: false });
 
     logger.info(
       { userId: user._id },
       "Password reset token generated successfully"
     );
+
+    // TODO: Send email with unHashedToken
+    // In production, you would send this via email service
+    // For now, return it (ONLY FOR DEVELOPMENT/TESTING)
+    return {
+      message: "Password reset token generated",
+      resetToken: unHashedToken, // Remove this in production
+    };
   },
 
-  resetForgottenPassword: async ({
-    resetToken,
-    newPassword,
-  }: ResetPasswordDto) => {
+  resetForgottenPassword: async (data: ResetPasswordDto) => {
     logger.info("Processing password reset request");
+
+    const { resetToken, newPassword } = data;
+
     if (!resetToken) throw new ApiError(400, "Reset token is missing");
     if (!newPassword || newPassword.length < 6)
-      throw new ApiError(400, "New password is invalid");
+      throw new ApiError(400, "New password must be at least 6 characters");
 
     const hashedToken = crypto
       .createHash("sha256")
@@ -202,14 +229,25 @@ export const authService = {
       .digest("hex");
 
     const user = await authRepository.findByForgotPasswordToken(hashedToken);
-    if (!user) throw new ApiError(489, "Token is invalid or expired");
 
+    if (!user) {
+      logger.warn("Invalid or expired password reset token");
+      throw new ApiError(400, "Token is invalid or expired");
+    }
+
+    // Clear the reset tokens
     user.forgetPasswordToken = undefined;
     user.forgetPasswordTokenExpiry = undefined;
 
+    // Update password (will be hashed by pre-save hook)
     user.password = newPassword;
 
+    // Clear refresh token for security
+    user.refreshToken = undefined;
+
     await user.save({ validateBeforeSave: false });
+
+    logger.info({ userId: user._id }, "Password reset successfully");
 
     return { message: "Password reset successfully" };
   },

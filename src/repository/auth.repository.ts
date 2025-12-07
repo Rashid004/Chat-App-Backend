@@ -1,19 +1,11 @@
-import { UserModel } from "../models/User";
-import { IUser } from "../types";
 import { createModuleLogger } from "../config/logger";
 import { Types } from "mongoose";
+import { UserModel } from "../models/User";
+import { IUser } from "../types/user";
 
 const logger = createModuleLogger("auth.repository");
 
 export const authRepository = {
-  // --- Find user by email or username ---
-  findByEmailOrUsername: async (email: string, username: string) => {
-    logger.debug({ email, username }, "Finding user by email or username");
-    const user = await UserModel.findOne({ $or: [{ email }, { username }] });
-    logger.debug({ found: !!user }, "User search completed");
-    return user;
-  },
-
   // --- Create new user ---
   createUser: async (data: Partial<IUser>) => {
     logger.debug(
@@ -22,6 +14,14 @@ export const authRepository = {
     );
     const user = await UserModel.create(data);
     logger.info({ userId: user._id }, "User created successfully");
+    return user;
+  },
+
+  // --- Find user by email or username ---
+  findByEmailOrUsername: async (email: string, username: string) => {
+    logger.debug({ email, username }, "Finding user by email or username");
+    const user = await UserModel.findOne({ $or: [{ email }, { username }] });
+    logger.debug({ found: !!user }, "User search completed");
     return user;
   },
 
@@ -72,27 +72,35 @@ export const authRepository = {
     hashedToken: string,
     expiry: number
   ) => {
+    logger.debug({ userId, hashedToken }, "Saving forgot password token");
     return UserModel.findByIdAndUpdate(
       userId,
       {
-        forgotPasswordToken: hashedToken,
-        forgotPasswordExpiry: new Date(expiry),
+        forgetPasswordToken: hashedToken,
+        forgetPasswordTokenExpiry: new Date(expiry),
       },
       { new: true }
     );
   },
 
   findByForgotPasswordToken: async (hashedToken: string) => {
-    return UserModel.findOne({
-      forgotPasswordToken: hashedToken,
-      forgotPasswordExpiry: { $gt: Date.now() },
+    logger.debug({ hashedToken }, "Finding user by forgot password token");
+    const user = await UserModel.findOne({
+      forgetPasswordToken: hashedToken,
+      forgetPasswordTokenExpiry: { $gt: Date.now() },
     });
+    logger.debug(
+      { found: !!user },
+      "User lookup by forgot password token completed"
+    );
+    return user;
   },
 
   clearForgotPasswordToken: async (userId: string | Types.ObjectId) => {
+    logger.debug({ userId }, "Clearing forgot password token");
     return UserModel.findByIdAndUpdate(
       userId,
-      { $unset: { forgotPasswordToken: "", forgotPasswordExpiry: "" } },
+      { $unset: { forgetPasswordToken: "", forgetPasswordTokenExpiry: "" } },
       { new: true }
     );
   },
