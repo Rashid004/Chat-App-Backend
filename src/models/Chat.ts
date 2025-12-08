@@ -2,7 +2,6 @@ import { model, Schema } from "mongoose";
 import { IChat } from "../types/chat";
 
 /* ------------- Chat Schema -------------- */
-
 const chatSchema = new Schema<IChat>(
   {
     name: {
