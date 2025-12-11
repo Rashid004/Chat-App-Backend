@@ -9,8 +9,7 @@ export const createOneOnOneChatDto = z.object({
 export const createGroupChatDto = z.object({
   name: z.string().min(2, "Group name must be at least 2 characters"),
   participants: z
-    .string()
-    .min(1)
+    .array(z.string())
     .min(2, "Group must have at least 2 participants (excluding admin)"),
 });
 
@@ -19,9 +18,12 @@ export const renameGroupChatDto = z.object({
 });
 
 export const addParticipantDto = z.object({
+  chatId: z.string().min(1, "Chat ID is required"),
   participantId: z.string().min(1, "Participant ID is required"),
 });
+
 export const removeParticipantDto = z.object({
+  chatId: z.string().min(1, "Chat ID is required"),
   participantId: z.string().min(1, "Participant ID is required"),
 });
 
