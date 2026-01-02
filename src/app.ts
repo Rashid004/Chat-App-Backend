@@ -5,9 +5,10 @@ import { httpLogger } from "./config/logger";
 import helmet from "helmet";
 import { env } from "./config/env";
 import { connectDB } from "./config/database";
-import authRoutes from "./routes/auth";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { apiLimiter } from "./middleware/rateLimiter";
+import authRoutes from "./routes/auth";
+import chatRoutes from "./routes/chats";
 
 const app = express();
 
@@ -40,6 +41,7 @@ connectDB();
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/chat", chatRoutes);
 
 // Error handling (must be last)
 app.use(notFoundHandler);
