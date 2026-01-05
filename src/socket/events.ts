@@ -21,4 +21,9 @@ export const registerChatEvents = (io: Server, socket: Socket) => {
       .to(chatId)
       .emit(CHAT_EVENTS.STOP_TYPING, { chatId, userId: socket.user._id });
   });
+
+  /* -------------------- Send Message -------------------- */
+  socket.on(CHAT_EVENTS.SEND_MESSAGE, ({ chatId, message }) => {
+    socket.to(chatId).emit(CHAT_EVENTS.MESSAGE_RECEIVED, message);
+  });
 };

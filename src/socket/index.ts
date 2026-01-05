@@ -2,6 +2,7 @@ import http from "http";
 import { Server } from "socket.io";
 import { logger } from "../config/logger";
 import { setupSocketAuth } from "./auth";
+import { registerChatEvents } from "./events";
 
 export const initSocket = (server: http.Server) => {
   const io = new Server(server, {
