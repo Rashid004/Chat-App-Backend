@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { UserModel } from "../models/user";
 
-export const setupSocketAuth = (
+export const setupSocketAuth = async (
   socket: Socket,
   next: (err?: Error) => void
 ) => {
@@ -21,7 +21,7 @@ export const setupSocketAuth = (
       _id: string;
     };
 
-    const user = UserModel.findById(decoded._id).select(
+    const user = await UserModel.findById(decoded._id).select(
       "-password -refreshTokens"
     );
 

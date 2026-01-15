@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import http from "http";
 import cookieParser from "cookie-parser";
 import { httpLogger } from "./config/logger";
 import helmet from "helmet";
@@ -9,8 +10,11 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { apiLimiter } from "./middleware/rateLimiter";
 import authRoutes from "./routes/auth";
 import chatRoutes from "./routes/chats";
+import { initSocket } from "./socket";
 
 const app = express();
+
+const server = http.createServer();
 
 // CORS must come before helmet for proper preflight handling
 app.use(
